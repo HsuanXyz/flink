@@ -19,6 +19,8 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgZorroAntdModule } from 'ng-zorro-antd';
+import { ResizeComponent } from 'share/common/resize/resize.component';
+import { JobChartComponent } from 'share/customize/job-chart/job-chart.component';
 import { PipeModule } from 'share/pipes/pipe.module';
 import { DagreModule } from 'share/common/dagre/dagre.module';
 import { FileReadDirective } from 'share/common/file-read/file-read.directive';
@@ -43,7 +45,9 @@ import { RefreshDownloadComponent } from 'share/customize/refresh-download/refre
     FileReadDirective,
     MonacoEditorComponent,
     NavigationComponent,
-    RefreshDownloadComponent
+    RefreshDownloadComponent,
+    ResizeComponent,
+    JobChartComponent
   ],
   exports     : [
     JobListComponent,
@@ -53,7 +57,11 @@ import { RefreshDownloadComponent } from 'share/customize/refresh-download/refre
     FileReadDirective,
     MonacoEditorComponent,
     NavigationComponent,
-    RefreshDownloadComponent
+    RefreshDownloadComponent,
+    JobBadgeComponent,
+    TaskBadgeComponent,
+    ResizeComponent,
+    JobChartComponent
   ]
 })
 export class ShareModule {

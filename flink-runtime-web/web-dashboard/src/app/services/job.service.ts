@@ -38,13 +38,27 @@ import {
   UserAccumulatorsInterface,
   VerticesLinkInterface
 } from 'interfaces';
-import { flatMap, map } from 'rxjs/operators';
+import { ReplaySubject, Subject } from 'rxjs';
+import { flatMap, map, tap } from 'rxjs/operators';
 import { BASE_URL } from 'config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class JobService {
+  jobDetail$ = new ReplaySubject<JobDetailCorrectInterface>(1);
+  jobDetailLatest$ = new Subject<JobDetailCorrectInterface>();
+  selectedVertexNode$ = new ReplaySubject<NodesItemCorrectInterface | null>(1);
+  listOfNavigation = [
+    { title: 'Detail', pathOrParam: 'detail' },
+    { title: 'SubTasks', pathOrParam: 'subtasks' },
+    { title: 'TaskManagers', pathOrParam: 'taskmanagers' },
+    { title: 'Watermarks', pathOrParam: 'watermarks' },
+    { title: 'Accumulators', pathOrParam: 'accumulators' },
+    { title: 'BackPressure', pathOrParam: 'backpressure' },
+    { title: 'Metrics', pathOrParam: 'metrics' }
+  ];
+
   constructor(private httpClient: HttpClient) {
   }
 
@@ -99,7 +113,11 @@ export class JobService {
    */
   loadJob(jobId: string) {
     return this.httpClient.get<JobDetailInterface>(`${BASE_URL}/jobs/${jobId}`).pipe(
-      map((job) => this.convertJob(job))
+      map(job => this.convertJob(job)),
+      tap(job => {
+        this.jobDetail$.next(job);
+        this.jobDetailLatest$.next(job);
+      })
     );
   }
 
@@ -109,10 +127,11 @@ export class JobService {
    * @param vertexId
    */
   loadAccumulators(jobId: string, vertexId: string) {
-    return this.httpClient.get<UserAccumulatorsInterface>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/accumulators`).pipe(
+    return this.httpClient.get<{ 'user-accumulators': UserAccumulatorsInterface[] }>
+    (`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/accumulators`).pipe(
       flatMap((data) => {
         const accumulators = data[ 'user-accumulators' ];
-        return this.httpClient.get<SubTaskAccumulatorsInterface>(
+        return this.httpClient.get<{ subtasks: { 'user-accumulators': SubTaskAccumulatorsInterface[] } }>(
           `${BASE_URL}/jobs/${jobId}/vertices/${vertexId}/subtasks/accumulators`
         ).pipe(
           map((item) => {
@@ -148,7 +167,9 @@ export class JobService {
    * @param vertexId
    */
   loadSubTasks(jobId: string, vertexId: string) {
-    return this.httpClient.get<{ subtasks: JobSubTaskInterface[] }>(`${BASE_URL}/jobs/${jobId}/vertices/${vertexId}`);
+    return this.httpClient.get<{ subtasks: JobSubTaskInterface[] }>(
+      `${BASE_URL}/jobs/${jobId}/vertices/${vertexId}`).pipe(map(data => data && data.subtasks || [])
+    );
   }
 
   /**
