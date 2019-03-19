@@ -68,23 +68,21 @@ export class JobOverviewComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.jobService.jobDetail$.pipe(
-      takeUntil(this.destroy$),
-      first()
+      takeUntil(this.destroy$)
     ).subscribe(data => {
-      this.nodes = data.plan.nodes;
-      this.links = data.plan.links;
-      this.dagreComponent.flush(this.nodes, this.links, true);
-      this.cdr.markForCheck();
+      if (this.nodes.length) {
+        this.nodes = data.plan.nodes;
+        this.nodes.forEach(node => {
+          this.dagreComponent.updateNode(node.id, node);
+        });
+      } else {
+        this.nodes = data.plan.nodes;
+        this.links = data.plan.links;
+        this.dagreComponent.flush(this.nodes, this.links, true).then();
+        this.cdr.markForCheck();
+      }
     });
-    this.jobService.jobDetail$.pipe(
-      takeUntil(this.destroy$),
-      skip(1)
-    ).subscribe(data => {
-      this.nodes = data.plan.nodes;
-      this.nodes.forEach(node => {
-        this.dagreComponent.updateNode(node.id, node);
-      });
-    });
+
     this.jobService.selectedVertexNode$.pipe(takeUntil(this.destroy$)).subscribe(data => {
       this.selectedNode = data;
       if (this.selectedNode) {

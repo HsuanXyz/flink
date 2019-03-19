@@ -136,31 +136,33 @@ export class DagreComponent extends NzGraph {
    * @param links
    * @param isResizeNode
    */
-  flush(nodes: NodesItemCorrectInterface[], links: NodesItemLinkInterface[], isResizeNode = false) {
-    this.cacheNodes = [ ...nodes ];
-    this.cacheLinks = [ ...links ];
-    this.zone.run(() => {
-      this.selectedNodeId = null;
-      this.createGraph({ compound: true });
-      this.setNodes(nodes);
-      this.setEdge(links);
-      requestAnimationFrame(() => {
-        this.initLayout().then(() => {
-          requestAnimationFrame(() => {
-            this.redrawLines();
-            this.redrawNodes();
-            this.moveToCenter();
-            if (isResizeNode) {
-              this.visibility = Visibility.Hidden;
-              setTimeout(() => {
-                this.resetNodeSize();
-              });
-            }
+  flush(nodes: NodesItemCorrectInterface[], links: NodesItemLinkInterface[], isResizeNode = false): Promise<void> {
+    return new Promise(resolve => {
+      this.cacheNodes = [ ...nodes ];
+      this.cacheLinks = [ ...links ];
+      this.zone.run(() => {
+        this.selectedNodeId = null;
+        this.createGraph({ compound: true });
+        this.setNodes(nodes);
+        this.setEdge(links);
+        requestAnimationFrame(() => {
+          this.initLayout().then(() => {
+            requestAnimationFrame(() => {
+              this.redrawLines();
+              this.redrawNodes();
+              this.moveToCenter();
+              if (isResizeNode) {
+                this.visibility = Visibility.Hidden;
+                this.resetNodeSize().then(() => resolve());
+              } else {
+                resolve();
+              }
+            });
+            this.cd.markForCheck();
           });
-          this.cd.markForCheck();
         });
       });
-    });
+    })
   }
 
   /**
@@ -180,7 +182,7 @@ export class DagreComponent extends NzGraph {
         }
       }
     });
-    this.flush(this.cacheNodes, this.cacheLinks, false);
+    return this.flush(this.cacheNodes, this.cacheLinks, false);
   }
 
   /**
@@ -212,10 +214,15 @@ export class DagreComponent extends NzGraph {
       const node = this.layoutNodes.find(n => n.id === nodeEl.nativeElement.id);
       if (node) {
         const nodeGroupSelection = select(nodeEl.nativeElement);
-        nodeGroupSelection.attr('transform', `${node.options.oldTransform},scale(${node.options.oldScale}, ${node.options.oldScale})`)
-        .transition()
-        .duration(animate ? 500 : 0)
-        .attr('transform', `${node.options.transform},scale(${node.options.scale}, ${node.options.scale})`);
+        if (animate) {
+          nodeGroupSelection.attr('transform', `${node.options.oldTransform},scale(${node.options.oldScale}, ${node.options.oldScale})`)
+          .transition()
+          .duration(500)
+          .attr('transform', `${node.options.transform},scale(${node.options.scale}, ${node.options.scale})`);
+        } else {
+          nodeGroupSelection.attr('transform', `${node.options.transform},scale(${node.options.scale}, ${node.options.scale})`);
+        }
+
       }
     });
   }
@@ -257,7 +264,7 @@ export class DagreComponent extends NzGraph {
           requestAnimationFrame(() => {
             const t = zoomIdentity.translate(transform.x, transform.y).scale(transform.k);
             this.svgContainer.setPositionByTransform(t, true);
-            this.redrawNodes();
+            this.redrawNodes(!force);
           });
           this.graphElement.nativeElement.appendChild(this.overlayElement.nativeElement);
           this.graphElement.nativeElement.querySelectorAll(`.link-group`)
@@ -287,10 +294,14 @@ export class DagreComponent extends NzGraph {
     this.focusedLinkIds = [];
     this.recoveryLayout().then(() => {
       requestAnimationFrame(() => {
-        const t = zoomIdentity.translate(this.oldTransform.x, this.oldTransform.y).scale(this.oldTransform.k);
-        this.svgContainer.setPositionByTransform(t, true);
-        this.redrawLines();
-        this.redrawNodes();
+        if (this.oldTransform.x === 0 && this.oldTransform.y === 0 && this.oldTransform.k === 1) {
+          this.moveToCenter();
+        } else {
+          const t = zoomIdentity.translate(this.oldTransform.x, this.oldTransform.y).scale(this.oldTransform.k);
+          this.svgContainer.setPositionByTransform(t, true);
+          this.redrawLines();
+          this.redrawNodes();
+        }
       });
       this.cd.markForCheck();
     });

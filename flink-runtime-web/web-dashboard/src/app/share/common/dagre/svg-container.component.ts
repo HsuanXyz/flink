@@ -67,7 +67,11 @@ export class SvgContainerComponent implements OnInit, AfterContentInit {
    * @param animate
    */
   setPositionByTransform(transform: { x: number, y: number, k: number }, animate = false) {
-    this.svgSelect.transition().duration(animate ? 500 : 0).call(this.zoomController.transform, transform);
+    if (animate) {
+      this.svgSelect.transition().duration(500).call(this.zoomController.transform, transform);
+    } else {
+      this.svgSelect.transition().call(this.zoomController.transform, transform);
+    }
   }
 
   constructor(private el: ElementRef) {
